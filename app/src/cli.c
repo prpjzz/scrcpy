@@ -839,12 +839,6 @@ static const struct sc_option options[] = {
                 "allows apps that use `FLAG_SECURE` to be mirrored to your PC."
     },
     {
-        // deprecated
-        .longopt_id = OPT_ROTATION,
-        .longopt = "rotation",
-        .argdesc = "value",
-    },
-    {
         .shortopt = 's',
         .longopt = "serial",
         .argdesc = "serial",
