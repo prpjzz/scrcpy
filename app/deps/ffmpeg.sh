@@ -114,7 +114,7 @@ else
         conf+=(
             --enable-cross-compile
             --cross-prefix="${HOST_TRIPLET}-"
-            --cc="${HOST_TRIPLET}-gcc"
+            --cc="ccache ${HOST_TRIPLET}-gcc"
         )
 
         case "$HOST" in

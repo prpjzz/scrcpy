@@ -39,6 +39,8 @@ else
         -DCMAKE_INSTALL_PREFIX="$INSTALL_DIR/$DIRNAME"
         -DCMAKE_BUILD_TYPE=Release
         -DSDL_TESTS=OFF
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
     )
 
     if [[ "$HOST" == linux ]]
