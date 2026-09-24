@@ -2,7 +2,7 @@
 set -ex
 . $(dirname ${BASH_SOURCE[0]})/_init "$@"
 
-VERSION=37.0.0
+VERSION=37.0.1
 URL="https://dl.google.com/android/repository/platform-tools_r$VERSION-win.zip"
 SHA256SUM=4fe305812db074cea32903a489d061eb4454cbc90a49e8fea677f4b7af764918
 

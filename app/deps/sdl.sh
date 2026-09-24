@@ -3,9 +3,9 @@ set -ex
 . $(dirname ${BASH_SOURCE[0]})/_init
 process_args "$@"
 
-VERSION=3.4.12
+VERSION=3.4.16
 URL="https://github.com/libsdl-org/SDL/archive/refs/tags/release-$VERSION.tar.gz"
-SHA256SUM=b68381f06a7580e63400b3b6eb547ec57d8c3ebde70f9f40e0aba530ba05da27
+SHA256SUM=c2ee715e42ec520c4d11fd8d249ef1d2b2baf4ad31148b72b3b000276c0b3633
 
 PROJECT_DIR="sdl-$VERSION"
 FILENAME="$PROJECT_DIR.tar.gz"
