@@ -130,7 +130,7 @@ else
                 conf+=(
                     --target-os=mingw32
                     --arch=x86_64
-                    --x86asmexe=nasm
+                    --x86asmexe=/usr/bin/nasm
                 )
                 ;;
 
