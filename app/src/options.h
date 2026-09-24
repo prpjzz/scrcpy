@@ -344,6 +344,8 @@ struct scrcpy_options {
     bool camera_torch;
     bool keep_active;
     bool flex_display;
+    bool ignore_video_encoder_constraints;
+    bool update_terminal_title;
     bool root;
 };
 

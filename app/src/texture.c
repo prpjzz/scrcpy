@@ -61,6 +61,7 @@ sc_texture_to_sdl_color_space(enum AVColorSpace color_space,
         case AVCOL_SPC_BT709:
         case AVCOL_SPC_RGB:
         case AVCOL_SPC_UNSPECIFIED:
+        case AVCOL_SPC_YCGCO:
             return full_range ? SDL_COLORSPACE_BT709_FULL
                               : SDL_COLORSPACE_BT709_LIMITED;
         case AVCOL_SPC_BT470BG:
@@ -81,6 +82,9 @@ sc_texture_create_frame_texture(struct sc_texture *tex,
                                 struct sc_size size,
                                 enum AVColorSpace color_space,
                                 enum AVColorRange color_range) {
+    LOGV("Creating new texture: size=%" PRIu16 "x%" PRIu16 " color_space=%d "
+         "color_range=%d", size.width, size.height, color_space, color_range);
+
     SDL_PropertiesID props = SDL_CreateProperties();
     if (!props) {
         return NULL;
@@ -119,36 +123,49 @@ sc_texture_create_frame_texture(struct sc_texture *tex,
     if (tex->mipmaps) {
         struct sc_opengl *gl = &tex->gl;
 
+        // The properties are owned by the texture
         SDL_PropertiesID props = SDL_GetTextureProperties(texture);
         if (!props) {
             LOGE("Could not get texture properties: %s", SDL_GetError());
-            SDL_DestroyTexture(texture);
             return NULL;
         }
+
+        // A YV12 texture is backed by one OpenGL texture per plane
+        static const char *const opengl_keys[3] = {
+            SDL_PROP_TEXTURE_OPENGL_TEXTURE_NUMBER,
+            SDL_PROP_TEXTURE_OPENGL_TEXTURE_U_NUMBER,
+            SDL_PROP_TEXTURE_OPENGL_TEXTURE_V_NUMBER,
+        };
+        static const char *const opengles2_keys[3] = {
+            SDL_PROP_TEXTURE_OPENGLES2_TEXTURE_NUMBER,
+            SDL_PROP_TEXTURE_OPENGLES2_TEXTURE_U_NUMBER,
+            SDL_PROP_TEXTURE_OPENGLES2_TEXTURE_V_NUMBER,
+        };
 
         const char *renderer_name = SDL_GetRendererName(tex->renderer);
-        const char *key = !renderer_name || !strcmp(renderer_name, "opengl")
-                        ? SDL_PROP_TEXTURE_OPENGL_TEXTURE_NUMBER
-                        : SDL_PROP_TEXTURE_OPENGLES2_TEXTURE_NUMBER;
+        const char *const *keys = !renderer_name
+                               || !strcmp(renderer_name, "opengl")
+                                ? opengl_keys : opengles2_keys;
 
-        int64_t texture_id = SDL_GetNumberProperty(props, key, 0);
-        SDL_DestroyProperties(props);
-        if (!texture_id) {
-            LOGE("Could not get texture id: %s", SDL_GetError());
-            SDL_DestroyTexture(texture);
-            return NULL;
+        for (unsigned i = 0; i < 3; ++i) {
+            int64_t texture_id = SDL_GetNumberProperty(props, keys[i], 0);
+            if (!texture_id) {
+                LOGE("Could not get texture id: %s", SDL_GetError());
+                SDL_DestroyTexture(texture);
+                return NULL;
+            }
+
+            assert(!(texture_id & ~0xFFFFFFFF)); // fits in uint32_t
+            tex->texture_ids[i] = texture_id;
+            gl->BindTexture(GL_TEXTURE_2D, tex->texture_ids[i]);
+
+            // Enable trilinear filtering for downscaling
+            gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                              GL_LINEAR_MIPMAP_LINEAR);
+            gl->TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, -1.f);
+
+            gl->BindTexture(GL_TEXTURE_2D, 0);
         }
-
-        assert(!(texture_id & ~0xFFFFFFFF)); // fits in uint32_t
-        tex->texture_id = texture_id;
-        gl->BindTexture(GL_TEXTURE_2D, tex->texture_id);
-
-        // Enable trilinear filtering for downscaling
-        gl->TexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                          GL_LINEAR_MIPMAP_LINEAR);
-        gl->TexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, -1.f);
-
-        gl->BindTexture(GL_TEXTURE_2D, 0);
     }
 
     return texture;
@@ -197,11 +214,13 @@ sc_texture_set_from_frame(struct sc_texture *tex, const AVFrame *frame) {
     }
 
     if (tex->mipmaps) {
-        assert(tex->texture_id);
         struct sc_opengl *gl = &tex->gl;
 
-        gl->BindTexture(GL_TEXTURE_2D, tex->texture_id);
-        gl->GenerateMipmap(GL_TEXTURE_2D);
+        for (unsigned i = 0; i < 3; ++i) {
+            assert(tex->texture_ids[i]);
+            gl->BindTexture(GL_TEXTURE_2D, tex->texture_ids[i]);
+            gl->GenerateMipmap(GL_TEXTURE_2D);
+        }
         gl->BindTexture(GL_TEXTURE_2D, 0);
     }
 
