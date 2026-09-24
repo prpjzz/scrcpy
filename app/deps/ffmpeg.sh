@@ -122,6 +122,7 @@ else
                 conf+=(
                     --target-os=mingw32
                     --arch=x86
+                    --x86asmexe=nasm
                 )
                 ;;
 
@@ -129,6 +130,7 @@ else
                 conf+=(
                     --target-os=mingw32
                     --arch=x86_64
+                    --x86asmexe=nasm
                 )
                 ;;
 
